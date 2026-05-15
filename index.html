@@ -21,21 +21,20 @@
     transform: none !important;
   }
 
- .slide-wrap {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
+  .slide-wrap {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+  }
 
-.slide-wrap img {
-  width: 100%;
-  height: 100%;
-  /* Use cover or contain now that the container matches the slide aspect ratio */
-  object-fit: cover; 
-  display: block;
-  pointer-events: none;
-  user-select: none;
-}
+  .slide-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;
+    user-select: none;
+  }
 
   .hotspot {
     position: absolute;
@@ -200,26 +199,21 @@
   const LOCKED_SLIDES = new Set([0, 1]);
   const TOTAL = 10;
 
-Reveal.initialize({
-  hash: true,
-  transition: 'fade',
-  transitionSpeed: 'fast',
-  
-  // Set these to match your PDF page dimensions/aspect ratio
-  width: 1440, 
-  height: 1080,
-  
-  margin: 0,
-  minScale: 0.1,
-  maxScale: 2.0,
-  controls: false,
-  progress: false,
-  center: true, // This leaves black bars on the sides of the desktop browser if needed, keeping your slide perfect
-  embedded: false,
-});
+  Reveal.initialize({
+    hash: true,
+    transition: 'fade',
+    transitionSpeed: 'fast',
+    width: window.innerWidth,
+    height: window.innerHeight,
+    margin: 0,
+    minScale: 1,
+    maxScale: 1,
+    controls: false,
+    progress: false,
+    center: false,
+    embedded: false,
+  });
 
-// Remove the window 'resize' event listener entirely! 
-// Reveal.js will natively handle scaling now.
   // Resize handler — keep reveal filling the window
   window.addEventListener('resize', () => {
     Reveal.configure({ width: window.innerWidth, height: window.innerHeight });
