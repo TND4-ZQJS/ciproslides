@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>CI Pro Universe</title>
+
+<!-- PDF.js official annotation layer CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css">
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #1a1a1a;
+    overflow: hidden;
+    font-family: sans-serif;
+  }
+
+  /* ── Splash ── */
+  #splash {
+    position: fixed; inset: 0;
+    background: #111;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 99999;
+  }
+  #splash h1 { color: #fff; font-size: clamp(20px,4vw,40px); margin-bottom: 8px; }
+  #splash p  { color: #aaa; font-size: clamp(12px,2vw,16px); margin-bottom: 36px; text-align:center; padding:0 20px; }
+  #splash .start-btn {
+    background: #e02020; color: #fff;
+    border: none; border-radius: 40px;
+    padding: 14px 44px; font-size: clamp(14px,2vw,20px);
+    cursor: pointer; letter-spacing: 1px;
+  }
+  #splash .start-btn:hover { background: #c01010; }
+
+  /* ── Rotate overlay ── */
+  #rotateOverlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.95);
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 88888;
+  }
+  #rotateOverlay.show { display: flex; }
+  #rotateOverlay .icon { font-size: 60px; animation: rot 2.5s ease-in-out infinite; }
+  #rotateOverlay p { color: #fff; font-size: 18px; margin-top: 20px; text-align: center; padding: 0 30px; }
+  @keyframes rot {
+    0%,100% { transform: rotate(0deg); }
+    40%,60% { transform: rotate(90deg); }
+  }
+
+  /* ── Toolbar ── */
+  #toolbar {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; align-items: center;
+    justify-content: space-between;
+    background: #2a2a2a;
+    padding: 8px 14px; gap: 10px;
+    z-index: 1000;
+    border-bottom: 1px solid #444;
+  }
+  .tb-group { display: flex; align-items: center; gap: 8px; }
+
+  .tb-btn {
+    background: #444; color: #fff; border: none;
+    border-radius: 6px; padding: 6px 12px;
+    font-size: 13px; cursor: pointer;
+  }
+  .tb-btn:hover { background: #666; }
+  .tb-btn:disabled { opacity: 0.3; cursor: default; }
+
+  #pageInfo { color: #ccc; font-size: 13px; white-space: nowrap; }
+
+  #pageInput {
+    width: 52px; text-align: center;
+    background: #333; color: #fff;
+    border: 1px solid #555; border-radius: 6px;
+    padding: 5px 6px; font-size: 13px;
+  }
+
+  #zoomSelect {
+    background: #333; color: #fff;
+    border: 1px solid #555; border-radius: 6px;
+    padding: 5px 6px; font-size: 13px; cursor: pointer;
+  }
+
+  #fsBtn {
+    background: #e02020; color: #fff; border: none;
+    border-radius: 6px; padding: 6px 12px;
+    font-size: 13px; cursor: pointer;
+  }
+  #fsBtn:hover { background: #c01010; }
+
+  /* ── Canvas container ── */
+  #canvasContainer {
+    position: fixed;
+    top: 45px; left: 0; right: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1a1a;
+    overflow: auto;
+  }
+
+  /* Page wrapper — canvas + annotation layer stacked */
+  #pageWrapper {
+    position: relative;
+    display: inline-block;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+  }
+
+  #pdfCanvas {
+    display: block;
+    background: #fff;
+  }
+
+  /* ── Official PDF.js annotation layer ── */
+  .annotationLayer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    overflow: hidden;
+    pointer-events: none; /* layer itself transparent */
+  }
+
+  /* Links inside annotation layer get pointer events */
+  .annotationLayer section {
+    pointer-events: all;
+    position: absolute;
+    cursor: pointer;
+  }
+
+  .annotationLayer .linkAnnotation > a {
+    position: absolute;
+    inset: 0;
+    display: block;
+  }
+
+  .annotationLayer .linkAnnotation > a:hover {
+    background: rgba(0, 100, 255, 0.1);
+    box-shadow: 0 2px 10px rgba(0, 100, 255, 0.3);
+    border-radius: 2px;
+  }
+
+  /* Loading bar */
+  #loadingBar {
+    position: fixed; top: 0; left: 0;
+    height: 3px; background: #e02020;
+    transition: width 0.3s; z-index: 99998; width: 0%;
+  }
+
+  /* Loading message */
+  #loadingMsg {
+    color: #aaa; font-size: 14px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<div id="loadingBar"></div>
+
+<!-- Splash -->
+<div id="splash">
+  <h1>CI Pro Universe</h1>
+  <p>Please view in landscape for the best experience</p>
+  <button class="start-btn" onclick="startPresentation()">▶ Tap to Start</button>
+</div>
+
+<!-- Rotate overlay -->
+<div id="rotateOverlay">
+  <div class="icon">🔄</div>
+  <p>Please rotate your device to <strong>landscape</strong> to continue</p>
+</div>
+
+<!-- Toolbar -->
+<div id="toolbar">
+  <div class="tb-group">
+    <button class="tb-btn" id="prevBtn" onclick="changePage(-1)">◀ Prev</button>
+    <button class="tb-btn" id="nextBtn" onclick="changePage(1)">Next ▶</button>
+  </div>
+  <div class="tb-group">
+    <input type="number" id="pageInput" value="1" min="1"
+           onchange="goToPage(parseInt(this.value))"
+           onkeydown="if(event.key==='Enter') goToPage(parseInt(this.value))">
+    <span id="pageInfo">/ —</span>
+  </div>
+  <div class="tb-group">
+    <select id="zoomSelect" onchange="setZoom(this.value)">
+      <option value="page-fit" selected>Fit Page</option>
+      <option value="page-width">Fit Width</option>
+      <option value="0.5">50%</option>
+      <option value="0.75">75%</option>
+      <option value="1.0">100%</option>
+      <option value="1.25">125%</option>
+      <option value="1.5">150%</option>
+    </select>
+  </div>
+  <button id="fsBtn" onclick="toggleFS()">⛶ Fullscreen</button>
+</div>
+
+<!-- Page area -->
+<div id="canvasContainer">
+  <div id="pageWrapper">
+    <canvas id="pdfCanvas"></canvas>
+    <div id="annotationLayerDiv" class="annotationLayer"></div>
+  </div>
+  <div id="loadingMsg">Loading PDF...</div>
+</div>
+
+<!-- PDF.js from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  // ── Worker ──
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  // ── Config — change this if you rename your PDF ──
+  const PDF_URL = 'cipro.pdf';
+
+  // ── State ──
+  let pdfDoc    = null;
+  let pageNum   = 1;
+  let pageCount = 0;
+  let rendering = false;
+  let zoomMode  = 'page-fit';
+
+  const canvas    = document.getElementById('pdfCanvas');
+  const ctx       = canvas.getContext('2d');
+  const annDiv    = document.getElementById('annotationLayerDiv');
+  const loadingMsg = document.getElementById('loadingMsg');
+
+  // ── Splash ──
+  function startPresentation() {
+    document.getElementById('splash').style.display = 'none';
+
+    // Fullscreen
+    const el = document.documentElement;
+    const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+    if (rfs) rfs.call(el).catch(() => {});
+
+    // Orientation lock
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(() => {});
+    }
+
+    checkOrientation();
+    loadPDF();
+  }
+
+  // ── Load PDF ──
+  function loadPDF() {
+    const bar = document.getElementById('loadingBar');
+    bar.style.width = '30%';
+
+    pdfjsLib.getDocument(PDF_URL).promise.then(pdf => {
+      pdfDoc    = pdf;
+      pageCount = pdf.numPages;
+      document.getElementById('pageInfo').textContent = '/ ' + pageCount;
+      document.getElementById('pageInput').max = pageCount;
+      bar.style.width = '100%';
+      setTimeout(() => { bar.style.width = '0%'; }, 400);
+      loadingMsg.style.display = 'none';
+      renderPage(pageNum);
+    }).catch(err => {
+      loadingMsg.textContent = '⚠️ Error loading PDF. Make sure cipro.pdf is in the same folder.';
+      console.error(err);
+    });
+  }
+
+  // ── Calculate scale ──
+  function getScale(viewport) {
+    const container = document.getElementById('canvasContainer');
+    const availW = container.clientWidth  - 24;
+    const availH = container.clientHeight - 24;
+
+    if (zoomMode === 'page-fit') {
+      return Math.min(availW / viewport.width, availH / viewport.height);
+    } else if (zoomMode === 'page-width') {
+      return availW / viewport.width;
+    } else {
+      return parseFloat(zoomMode);
+    }
+  }
+
+  // ── Render page + annotation layer ──
+  function renderPage(num) {
+    if (!pdfDoc || rendering) return;
+    rendering = true;
+
+    pdfDoc.getPage(num).then(page => {
+
+      // 1. Render canvas
+      const baseViewport = page.getViewport({ scale: 1.0 });
+      const scale        = getScale(baseViewport);
+      const viewport     = page.getViewport({ scale });
+
+      canvas.width  = viewport.width;
+      canvas.height = viewport.height;
+
+      page.render({ canvasContext: ctx, viewport }).promise.then(() => {
+        rendering = false;
+        updateUI();
+
+        // 2. Render official annotation layer
+        renderAnnotationLayer(page, viewport);
+      });
+    });
+  }
+
+  // ── Official PDF.js AnnotationLayer ──
+  function renderAnnotationLayer(page, viewport) {
+    // Clear previous annotations
+    annDiv.innerHTML = '';
+    annDiv.style.width  = viewport.width  + 'px';
+    annDiv.style.height = viewport.height + 'px';
+
+    page.getAnnotations().then(annotations => {
+      // pdfjsLib.AnnotationLayer renders all annotation types correctly
+      // including GoTo, GoToR, URI, Named destinations — exactly like Acrobat
+      pdfjsLib.AnnotationLayer.render({
+        viewport:    viewport.clone({ dontFlip: false }),
+        div:         annDiv,
+        annotations: annotations,
+        page:        page,
+        linkService: linkService,
+        renderForms: false,
+        enableScripting: false,
+      });
+    });
+  }
+
+  // ── Link service — tells AnnotationLayer how to handle navigation ──
+  const linkService = {
+    // Called for internal page links
+    goToDestination(dest) {
+      if (typeof dest === 'string') {
+        pdfDoc.getDestination(dest).then(destArray => {
+          if (destArray) resolveDestArray(destArray);
+        });
+      } else if (Array.isArray(dest)) {
+        resolveDestArray(dest);
+      }
+    },
+
+    // Called for page number links
+    goToPage(pageNumber) {
+      goToPage(pageNumber);
+    },
+
+    // Called for external URLs
+    addLinkAttributes(link, url) {
+      link.href   = url;
+      link.target = '_blank';
+      link.rel    = 'noopener noreferrer';
+    },
+
+    getDestinationHash(dest) { return '#'; },
+    getAnchorUrl(hash)       { return '#'; },
+    get pagesCount()         { return pageCount; },
+    get page()               { return pageNum; },
+    set page(val)            { goToPage(val); },
+    executeNamedAction(action) {
+      if (action === 'NextPage') changePage(1);
+      if (action === 'PrevPage') changePage(-1);
+      if (action === 'FirstPage') goToPage(1);
+      if (action === 'LastPage')  goToPage(pageCount);
+    },
+  };
+
+  // ── Resolve destination array to page number ──
+  function resolveDestArray(destArray) {
+    const ref = destArray[0];
+    if (ref && typeof ref === 'object' && ref.num !== undefined) {
+      // It's a PDF object reference — resolve to page index
+      pdfDoc.getPageIndex(ref).then(pageIndex => {
+        goToPage(pageIndex + 1);
+      }).catch(() => {});
+    } else if (typeof ref === 'number') {
+      goToPage(ref + 1);
+    }
+  }
+
+  // ── Navigation ──
+  function changePage(delta) { goToPage(pageNum + delta); }
+
+  function goToPage(num) {
+    if (!pdfDoc) return;
+    num = Math.max(1, Math.min(num, pageCount));
+    pageNum = num;
+    document.getElementById('pageInput').value = num;
+    renderPage(num);
+  }
+
+  function updateUI() {
+    document.getElementById('prevBtn').disabled = pageNum <= 1;
+    document.getElementById('nextBtn').disabled = pageNum >= pageCount;
+    document.getElementById('pageInfo').textContent = '/ ' + pageCount;
+  }
+
+  // ── Zoom ──
+  function setZoom(val) {
+    zoomMode = val;
+    renderPage(pageNum);
+  }
+
+  // ── Keyboard ──
+  document.addEventListener('keydown', e => {
+    if (['ArrowRight','ArrowDown',' '].includes(e.key)) changePage(1);
+    if (['ArrowLeft','ArrowUp'].includes(e.key)) changePage(-1);
+  });
+
+  // ── Touch swipe ──
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const diff = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(diff) > 50) changePage(diff < 0 ? 1 : -1);
+  });
+
+  // ── Fullscreen ──
+  function toggleFS() {
+    const btn = document.getElementById('fsBtn');
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      const el = document.documentElement;
+      (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen).call(el).catch(() => {});
+    } else {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document).catch(() => {});
+    }
+  }
+
+  const updateFsBtn = () => {
+    document.getElementById('fsBtn').textContent =
+      (document.fullscreenElement || document.webkitFullscreenElement)
+        ? '✕ Exit' : '⛶ Fullscreen';
+    setTimeout(() => renderPage(pageNum), 300);
+  };
+  document.addEventListener('fullscreenchange', updateFsBtn);
+  document.addEventListener('webkitfullscreenchange', updateFsBtn);
+
+  // ── Orientation ──
+  function checkOrientation() {
+    const overlay = document.getElementById('rotateOverlay');
+    window.innerHeight > window.innerWidth
+      ? overlay.classList.add('show')
+      : overlay.classList.remove('show');
+  }
+  window.addEventListener('resize', () => {
+    checkOrientation();
+    if (pdfDoc) renderPage(pageNum);
+  });
+  window.addEventListener('orientationchange', () => setTimeout(checkOrientation, 300));
+</script>
+</body>
+</html>
