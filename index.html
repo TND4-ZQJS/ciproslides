@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>CI Pro Universe</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #1a1a1a;
+    overflow: hidden;
+    font-family: sans-serif;
+  }
+
+  /* ── Splash ── */
+  #splash {
+    position: fixed;
+    inset: 0;
+    background: #111;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+  }
+  #splash h1 { color: #fff; font-size: clamp(20px,4vw,40px); margin-bottom: 8px; }
+  #splash p  { color: #aaa; font-size: clamp(12px,2vw,16px); margin-bottom: 36px; }
+  #splash .start-btn {
+    background: #e02020; color: #fff;
+    border: none; border-radius: 40px;
+    padding: 14px 44px; font-size: clamp(14px,2vw,20px);
+    cursor: pointer; letter-spacing: 1px;
+  }
+  #splash .start-btn:hover { background: #c01010; }
+
+  /* ── Rotate overlay ── */
+  #rotateOverlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.95);
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 88888;
+  }
+  #rotateOverlay.show { display: flex; }
+  #rotateOverlay .icon { font-size: 60px; animation: rot 2.5s ease-in-out infinite; }
+  #rotateOverlay p { color: #fff; font-size: 18px; margin-top: 20px; text-align: center; padding: 0 30px; }
+  @keyframes rot {
+    0%,100% { transform: rotate(0deg); }
+    40%,60% { transform: rotate(90deg); }
+  }
+
+  /* ── Viewer layout ── */
+  #viewerContainer {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Toolbar ── */
+  #toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #2a2a2a;
+    padding: 8px 14px;
+    gap: 10px;
+    flex-shrink: 0;
+    border-bottom: 1px solid #444;
+  }
+  .tb-group { display: flex; align-items: center; gap: 8px; }
+
+  .tb-btn {
+    background: #444; color: #fff; border: none;
+    border-radius: 6px; padding: 6px 12px;
+    font-size: 13px; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .tb-btn:hover { background: #666; }
+  .tb-btn:disabled { opacity: 0.3; cursor: default; }
+
+  #pageInfo {
+    color: #ccc; font-size: 13px; white-space: nowrap;
+  }
+
+  #pageInput {
+    width: 52px; text-align: center;
+    background: #333; color: #fff;
+    border: 1px solid #555; border-radius: 6px;
+    padding: 5px 6px; font-size: 13px;
+  }
+
+  #zoomSelect {
+    background: #333; color: #fff;
+    border: 1px solid #555; border-radius: 6px;
+    padding: 5px 6px; font-size: 13px; cursor: pointer;
+  }
+
+  #fsBtn {
+    background: #e02020; color: #fff; border: none;
+    border-radius: 6px; padding: 6px 12px;
+    font-size: 13px; cursor: pointer;
+  }
+  #fsBtn:hover { background: #c01010; }
+
+  /* ── Canvas area ── */
+  #canvasContainer {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    background: #1a1a1a;
+    padding: 12px;
+    position: relative;
+  }
+
+  #pdfCanvas {
+    display: block;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+    background: #fff;
+    cursor: default;
+  }
+
+  /* Link overlay layer — sits on top of canvas, same size */
+  #linkLayer {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none; /* children have pointer-events */
+  }
+
+  .pdf-link {
+    position: absolute;
+    pointer-events: all;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+  .pdf-link:hover { background: rgba(0,100,255,0.15); outline: 1px solid rgba(0,100,255,0.4); }
+
+  /* ── Loading indicator ── */
+  #loadingBar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: #e02020;
+    transition: width 0.3s;
+    z-index: 99998;
+    width: 0%;
+  }
+
+  #loadingMsg {
+    position: fixed;
+    bottom: 18px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7);
+    color: #fff; font-size: 12px;
+    padding: 6px 16px; border-radius: 20px;
+    z-index: 9999; pointer-events: none;
+    display: none;
+  }
+  #loadingMsg.show { display: block; }
+</style>
+</head>
+<body>
+
+<!-- Loading bar -->
+<div id="loadingBar"></div>
+<div id="loadingMsg" id="loadingMsg">Loading PDF...</div>
+
+<!-- Splash -->
+<div id="splash">
+  <h1>CI Pro Universe</h1>
+  <p>Please view in landscape for the best experience</p>
+  <button class="start-btn" onclick="startPresentation()">▶ Tap to Start</button>
+</div>
+
+<!-- Rotate overlay -->
+<div id="rotateOverlay">
+  <div class="icon">🔄</div>
+  <p>Please rotate your device to <strong>landscape</strong> to continue</p>
+</div>
+
+<!-- Main viewer -->
+<div id="viewerContainer">
+
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <div class="tb-group">
+      <button class="tb-btn" id="prevBtn" onclick="changePage(-1)">◀ Prev</button>
+      <button class="tb-btn" id="nextBtn" onclick="changePage(1)">Next ▶</button>
+    </div>
+
+    <div class="tb-group">
+      <input type="number" id="pageInput" value="1" min="1"
+             onchange="goToPage(parseInt(this.value))"
+             onkeydown="if(event.key==='Enter') goToPage(parseInt(this.value))">
+      <span id="pageInfo">/ —</span>
+    </div>
+
+    <div class="tb-group">
+      <select id="zoomSelect" onchange="setZoom(this.value)">
+        <option value="page-fit" selected>Fit Page</option>
+        <option value="page-width">Fit Width</option>
+        <option value="0.5">50%</option>
+        <option value="0.75">75%</option>
+        <option value="1.0">100%</option>
+        <option value="1.25">125%</option>
+        <option value="1.5">150%</option>
+      </select>
+    </div>
+
+    <button id="fsBtn" onclick="toggleFS()">⛶ Fullscreen</button>
+  </div>
+
+  <!-- Canvas + link overlay -->
+  <div id="canvasContainer">
+    <canvas id="pdfCanvas"></canvas>
+    <div id="linkLayer"></div>
+  </div>
+
+</div>
+
+<!--
+  PDF.js is loaded from CDN (requires internet connection).
+  For fully offline use, download pdf.js and pdf.worker.js from:
+  https://mozilla.github.io/pdf.js/getting_started/
+  and replace the src below with local paths.
+-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  // ── Config ──
+  const PDF_URL = 'cipro.pdf';
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  // ── State ──
+  let pdfDoc     = null;
+  let pageNum    = 1;
+  let pageCount  = 0;
+  let rendering  = false;
+  let zoomMode   = 'page-fit'; // 'page-fit' | 'page-width' | number
+  let currentScale = 1.0;
+
+  const canvas    = document.getElementById('pdfCanvas');
+  const ctx       = canvas.getContext('2d');
+  const linkLayer = document.getElementById('linkLayer');
+
+  // ── Splash ──
+  function startPresentation() {
+    document.getElementById('splash').style.display = 'none';
+    document.getElementById('loadingMsg').classList.add('show');
+    document.getElementById('loadingMsg').textContent = 'Loading PDF...';
+
+    // Fullscreen
+    const el = document.documentElement;
+    const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+    if (rfs) rfs.call(el).catch(() => {});
+
+    // Orientation lock
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(() => {});
+    }
+
+    checkOrientation();
+    loadPDF();
+  }
+
+  // ── Load PDF ──
+  function loadPDF() {
+    const bar = document.getElementById('loadingBar');
+    pdfjsLib.getDocument({ url: PDF_URL }).promise.then(pdf => {
+      pdfDoc   = pdf;
+      pageCount = pdf.numPages;
+      document.getElementById('pageInfo').textContent = '/ ' + pageCount;
+      document.getElementById('pageInput').max = pageCount;
+      document.getElementById('loadingMsg').classList.remove('show');
+      bar.style.width = '100%';
+      setTimeout(() => bar.style.width = '0%', 400);
+      renderPage(pageNum);
+    }).catch(err => {
+      document.getElementById('loadingMsg').textContent = 'Error loading PDF: ' + err.message;
+      console.error(err);
+    });
+  }
+
+  // ── Render page ──
+  function renderPage(num) {
+    if (!pdfDoc || rendering) return;
+    rendering = true;
+
+    pdfDoc.getPage(num).then(page => {
+      const container = document.getElementById('canvasContainer');
+      const availW = container.clientWidth  - 24;
+      const availH = container.clientHeight - 24;
+
+      const viewport1 = page.getViewport({ scale: 1.0 });
+
+      let scale;
+      if (zoomMode === 'page-fit') {
+        scale = Math.min(availW / viewport1.width, availH / viewport1.height);
+      } else if (zoomMode === 'page-width') {
+        scale = availW / viewport1.width;
+      } else {
+        scale = parseFloat(zoomMode);
+      }
+
+      currentScale = scale;
+      const viewport = page.getViewport({ scale });
+
+      canvas.width  = viewport.width;
+      canvas.height = viewport.height;
+
+      // Position link layer to match canvas
+      linkLayer.style.width  = viewport.width  + 'px';
+      linkLayer.style.height = viewport.height + 'px';
+
+      page.render({ canvasContext: ctx, viewport }).promise.then(() => {
+        rendering = false;
+        updateUI();
+        renderLinks(page, viewport);
+      });
+    });
+  }
+
+  // ── Render clickable links ──
+  function renderLinks(page, viewport) {
+    linkLayer.innerHTML = '';
+
+    page.getAnnotations().then(annotations => {
+      annotations.forEach(ann => {
+        if (ann.subtype !== 'Link') return;
+
+        const rect = pdfjsLib.Util.normalizeRect(
+          pdfjsLib.Util.applyTransform(ann.rect, viewport.transform)
+        );
+
+        const el = document.createElement('a');
+        el.className = 'pdf-link';
+        el.style.left   = rect[0] + 'px';
+        el.style.top    = rect[1] + 'px';
+        el.style.width  = (rect[2] - rect[0]) + 'px';
+        el.style.height = (rect[3] - rect[1]) + 'px';
+
+        // External URL
+        if (ann.url) {
+          el.href   = ann.url;
+          el.target = '_blank';
+          el.rel    = 'noopener';
+        }
+        // Internal page link
+        else if (ann.dest || ann.action) {
+          el.href = '#';
+          el.addEventListener('click', e => {
+            e.preventDefault();
+            resolveLink(ann, page);
+          });
+        }
+
+        linkLayer.appendChild(el);
+      });
+    });
+  }
+
+  // ── Resolve internal PDF link destination ──
+  function resolveLink(ann, page) {
+    if (ann.dest) {
+      const dest = ann.dest;
+      if (typeof dest === 'string') {
+        pdfDoc.getDestination(dest).then(destArray => {
+          if (destArray) resolveDestArray(destArray);
+        });
+      } else if (Array.isArray(dest)) {
+        resolveDestArray(dest);
+      }
+    } else if (ann.action && ann.action.type === 'GoTo') {
+      resolveDestArray(ann.action.dest);
+    }
+  }
+
+  function resolveDestArray(destArray) {
+    pdfDoc.getPageIndex(destArray[0]).then(pageIndex => {
+      goToPage(pageIndex + 1);
+    });
+  }
+
+  // ── Navigation ──
+  function changePage(delta) {
+    goToPage(pageNum + delta);
+  }
+
+  function goToPage(num) {
+    if (!pdfDoc) return;
+    num = Math.max(1, Math.min(num, pageCount));
+    if (num === pageNum && !rendering) return;
+    pageNum = num;
+    document.getElementById('pageInput').value = num;
+    renderPage(num);
+  }
+
+  function updateUI() {
+    document.getElementById('prevBtn').disabled = pageNum <= 1;
+    document.getElementById('nextBtn').disabled = pageNum >= pageCount;
+    document.getElementById('pageInput').value  = pageNum;
+    document.getElementById('pageInfo').textContent = '/ ' + pageCount;
+  }
+
+  // ── Zoom ──
+  function setZoom(val) {
+    zoomMode = val;
+    renderPage(pageNum);
+  }
+
+  // ── Keyboard navigation ──
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') changePage(1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp') changePage(-1);
+  });
+
+  // ── Touch swipe navigation ──
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const diff = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(diff) > 50) changePage(diff < 0 ? 1 : -1);
+  });
+
+  // ── Fullscreen ──
+  function toggleFS() {
+    const btn = document.getElementById('fsBtn');
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      const el = document.documentElement;
+      (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen).call(el).catch(() => {});
+      btn.textContent = '✕ Exit';
+    } else {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document).catch(() => {});
+      btn.textContent = '⛶ Fullscreen';
+    }
+  }
+
+  document.addEventListener('fullscreenchange', () => {
+    document.getElementById('fsBtn').textContent =
+      document.fullscreenElement ? '✕ Exit' : '⛶ Fullscreen';
+    // Re-render at new size after fullscreen transition
+    setTimeout(() => renderPage(pageNum), 300);
+  });
+  document.addEventListener('webkitfullscreenchange', () => {
+    document.getElementById('fsBtn').textContent =
+      document.webkitFullscreenElement ? '✕ Exit' : '⛶ Fullscreen';
+    setTimeout(() => renderPage(pageNum), 300);
+  });
+
+  // ── Orientation ──
+  function checkOrientation() {
+    const overlay = document.getElementById('rotateOverlay');
+    window.innerHeight > window.innerWidth
+      ? overlay.classList.add('show')
+      : overlay.classList.remove('show');
+  }
+  window.addEventListener('resize', () => {
+    checkOrientation();
+    if (pdfDoc) renderPage(pageNum);
+  });
+  window.addEventListener('orientationchange', () => setTimeout(checkOrientation, 300));
+</script>
+</body>
+</html>
