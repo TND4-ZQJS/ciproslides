@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PDF.js Diagnostic</title>
+<style>
+  body { background:#111; color:#fff; font-family:monospace; padding:20px; }
+  pre  { background:#222; padding:14px; border-radius:8px; overflow:auto; font-size:13px; }
+  h2   { color:#e02020; margin: 20px 0 8px; }
+  .ok  { color:#4f4; }
+  .err { color:#f44; }
+</style>
+</head>
+<body>
+<h1>PDF.js Diagnostic</h1>
+<p>Open this file in your browser (same folder as cipro.pdf) to diagnose link issues.</p>
+
+<h2>Step 1 — PDF.js version & API check</h2>
+<pre id="apiCheck">Loading...</pre>
+
+<h2>Step 2 — PDF load check</h2>
+<pre id="pdfCheck">Waiting...</pre>
+
+<h2>Step 3 — Page 1 annotations</h2>
+<pre id="annCheck">Waiting...</pre>
+
+<h2>Step 4 — Page 2 annotations (has iOS/Android links)</h2>
+<pre id="ann2Check">Waiting...</pre>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// Step 1 — check API
+const apiEl = document.getElementById('apiCheck');
+const info = {
+  version: pdfjsLib.version || 'unknown',
+  hasAnnotationLayer: typeof pdfjsLib.AnnotationLayer !== 'undefined',
+  annotationLayerType: typeof pdfjsLib.AnnotationLayer,
+  hasRenderMethod: pdfjsLib.AnnotationLayer && typeof pdfjsLib.AnnotationLayer.render === 'function',
+  annotationLayerKeys: pdfjsLib.AnnotationLayer ? Object.keys(pdfjsLib.AnnotationLayer) : [],
+};
+apiEl.innerHTML = JSON.stringify(info, null, 2);
+
+// Step 2 — load PDF
+const pdfEl  = document.getElementById('pdfCheck');
+const annEl  = document.getElementById('annCheck');
+const ann2El = document.getElementById('ann2Check');
+
+pdfjsLib.getDocument('cipro.pdf').promise.then(pdf => {
+  pdfEl.innerHTML = '<span class="ok">✅ PDF loaded — ' + pdf.numPages + ' pages</span>';
+
+  // Step 3 — page 1 annotations
+  pdf.getPage(1).then(page => {
+    page.getAnnotations().then(anns => {
+      annEl.innerHTML = 'Page 1 — ' + anns.length + ' annotations\n\n';
+      anns.forEach((a, i) => {
+        annEl.innerHTML += '--- Annotation ' + (i+1) + ' ---\n';
+        annEl.innerHTML += 'subtype: ' + a.subtype + '\n';
+        annEl.innerHTML += 'url: ' + (a.url || 'none') + '\n';
+        annEl.innerHTML += 'dest: ' + JSON.stringify(a.dest) + '\n';
+        annEl.innerHTML += 'action: ' + JSON.stringify(a.action) + '\n';
+        annEl.innerHTML += 'rect: ' + JSON.stringify(a.rect) + '\n\n';
+      });
+    });
+  });
+
+  // Step 4 — page 2 annotations
+  pdf.getPage(2).then(page => {
+    page.getAnnotations().then(anns => {
+      ann2El.innerHTML = 'Page 2 — ' + anns.length + ' annotations\n\n';
+      anns.forEach((a, i) => {
+        ann2El.innerHTML += '--- Annotation ' + (i+1) + ' ---\n';
+        ann2El.innerHTML += 'subtype: ' + a.subtype + '\n';
+        ann2El.innerHTML += 'url: ' + (a.url || 'none') + '\n';
+        ann2El.innerHTML += 'dest: ' + JSON.stringify(a.dest) + '\n';
+        ann2El.innerHTML += 'action: ' + JSON.stringify(a.action) + '\n';
+        ann2El.innerHTML += 'rect: ' + JSON.stringify(a.rect) + '\n\n';
+      });
+    });
+  });
+
+}).catch(err => {
+  pdfEl.innerHTML = '<span class="err">❌ ' + err.message + '</span>';
+});
+</script>
+</body>
+</html>
