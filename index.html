@@ -4,413 +4,427 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>CI Pro Universe</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #1a1a1a;
+    overflow: hidden;
+    font-family: sans-serif;
+  }
 
-  /* ── Splash screen ── */
+  /* ── Splash ── */
   #splash {
-    position: fixed;
-    inset: 0;
+    position: fixed; inset: 0;
     background: #111;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
     z-index: 99999;
-    cursor: pointer;
-    user-select: none;
   }
-  #splash h1 {
-    color: #fff;
-    font-family: sans-serif;
-    font-size: clamp(22px, 4vw, 42px);
-    margin-bottom: 10px;
-    letter-spacing: 1px;
+  #splash h1 { color: #fff; font-size: clamp(20px,4vw,40px); margin-bottom: 8px; }
+  #splash p  { color: #aaa; font-size: clamp(12px,2vw,16px); margin-bottom: 36px; text-align:center; padding:0 20px; }
+  #splash .start-btn {
+    background: #e02020; color: #fff;
+    border: none; border-radius: 40px;
+    padding: 14px 44px; font-size: clamp(14px,2vw,20px);
+    cursor: pointer; letter-spacing: 1px;
   }
-  #splash p {
-    color: #aaa;
-    font-family: sans-serif;
-    font-size: clamp(13px, 2vw, 18px);
-    margin-bottom: 40px;
-  }
-  #splash .btn {
-    background: #e02020;
-    color: #fff;
-    font-family: sans-serif;
-    font-size: clamp(14px, 2vw, 20px);
-    padding: 14px 40px;
-    border-radius: 40px;
-    border: none;
-    cursor: pointer;
-    letter-spacing: 1px;
-  }
-  #splash .btn:hover { background: #c01010; }
+  #splash .start-btn:hover { background: #c01010; }
 
   /* ── Rotate overlay ── */
   #rotateOverlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.93);
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.95);
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center;
     z-index: 88888;
   }
   #rotateOverlay.show { display: flex; }
-  #rotateOverlay span {
-    font-size: 64px;
-    animation: spin 2s linear infinite;
-  }
-  #rotateOverlay p {
-    color: #fff;
-    font-family: sans-serif;
-    font-size: 18px;
-    margin-top: 20px;
-    text-align: center;
-    padding: 0 30px;
-  }
-  @keyframes spin {
-    0%   { transform: rotate(0deg); }
-    25%  { transform: rotate(90deg); }
-    50%  { transform: rotate(90deg); }
-    75%  { transform: rotate(0deg); }
-    100% { transform: rotate(0deg); }
+  #rotateOverlay .icon { font-size: 60px; animation: rot 2.5s ease-in-out infinite; }
+  #rotateOverlay p { color: #fff; font-size: 18px; margin-top: 20px; text-align: center; padding: 0 30px; }
+  @keyframes rot {
+    0%,100% { transform: rotate(0deg); }
+    40%,60% { transform: rotate(90deg); }
   }
 
-  /* ── Reveal slides ── */
-  .reveal .slides section {
-    padding: 0 !important;
+  /* ── Toolbar ── */
+  #toolbar {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; align-items: center;
+    justify-content: space-between;
+    background: #2a2a2a;
+    padding: 8px 14px; gap: 10px;
+    z-index: 1000;
+    border-bottom: 1px solid #444;
+    flex-wrap: wrap;
+  }
+  .tb-group { display: flex; align-items: center; gap: 8px; }
+
+  .tb-btn {
+    background: #444; color: #fff; border: none;
+    border-radius: 6px; padding: 6px 12px;
+    font-size: 13px; cursor: pointer;
+  }
+  .tb-btn:hover { background: #666; }
+  .tb-btn:disabled { opacity: 0.3; cursor: default; }
+
+  #pageInfo { color: #ccc; font-size: 13px; white-space: nowrap; }
+
+  #pageInput {
+    width: 52px; text-align: center;
+    background: #333; color: #fff;
+    border: 1px solid #555; border-radius: 6px;
+    padding: 5px 6px; font-size: 13px;
   }
 
-  .slide-wrap {
-    position: relative;
-    width: 1600px;
-    height: 900px;
+  #zoomSelect {
+    background: #333; color: #fff;
+    border: 1px solid #555; border-radius: 6px;
+    padding: 5px 6px; font-size: 13px; cursor: pointer;
   }
 
-  .slide-wrap img {
-    width: 1600px;
-    height: 900px;
-    object-fit: fill;
-    display: block;
-    pointer-events: none;
-    user-select: none;
-    -webkit-user-drag: none;
-  }
-
-  /* Hotspots — positioned in 1600x900 space, scale with Reveal */
-  .hotspot {
-    position: absolute;
-    display: block;
-    cursor: pointer;
-    z-index: 999;
-    border-radius: 6px;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .hotspot:hover { background: rgba(255,255,255,0.15); }
-  .hotspot:active { background: rgba(255,255,255,0.3); }
-
-  /* Debug mode — press D */
-  body.debug .hotspot {
-    background: rgba(255,0,0,0.25) !important;
-    outline: 2px dashed red !important;
-  }
-
-  /* UI badges */
-  .slide-badge {
-    position: fixed;
-    bottom: 14px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.55);
-    color: #fff;
-    font-family: sans-serif;
-    font-size: 11px;
-    padding: 4px 12px;
-    border-radius: 20px;
-    z-index: 9999;
-    pointer-events: none;
-  }
-
-  .lock-indicator {
-    position: fixed;
-    top: 12px;
-    right: 14px;
-    background: rgba(200,40,40,0.9);
-    color: #fff;
-    font-family: sans-serif;
-    font-size: 11px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    z-index: 9999;
-    pointer-events: none;
-    display: none;
-  }
-  .lock-indicator.visible { display: block; }
-
-  /* Fullscreen button */
   #fsBtn {
+    background: #e02020; color: #fff; border: none;
+    border-radius: 6px; padding: 6px 12px;
+    font-size: 13px; cursor: pointer;
+  }
+  #fsBtn:hover { background: #c01010; }
+
+  /* ── Canvas container ── */
+  #canvasContainer {
     position: fixed;
-    bottom: 14px;
-    right: 14px;
-    background: rgba(0,0,0,0.55);
-    color: #fff;
-    font-family: sans-serif;
-    font-size: 11px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    z-index: 9999;
-    border: none;
+    top: 45px; left: 0; right: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1a1a;
+    overflow: auto;
+  }
+
+  #pageWrapper {
+    position: relative;
+    display: inline-block;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+  }
+
+  #pdfCanvas {
+    display: block;
+    background: #fff;
+  }
+
+  /* Annotation layer sits exactly over canvas */
+  #annotationLayer {
+    position: absolute;
+    top: 0; left: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  #annotationLayer section {
+    position: absolute;
+    pointer-events: all;
+  }
+  #annotationLayer .linkAnnotation > a {
+    position: absolute;
+    inset: 0;
+    display: block;
     cursor: pointer;
   }
-  #fsBtn:hover { background: rgba(255,255,255,0.2); }
+  #annotationLayer .linkAnnotation > a:hover {
+    background: rgba(0,120,255,0.12);
+    border-radius: 2px;
+  }
 
-  .reveal .progress { display: none; }
-  .reveal .controls { display: none; }
+  #loadingBar {
+    position: fixed; top: 0; left: 0;
+    height: 3px; background: #e02020;
+    transition: width 0.3s; z-index: 99998; width: 0%;
+  }
+  #loadingMsg { color: #888; font-size: 14px; text-align: center; }
 </style>
 </head>
 <body>
 
-<!-- Splash screen -->
+<div id="loadingBar"></div>
+
 <div id="splash">
   <h1>CI Pro Universe</h1>
-  <p>For the best experience, please use landscape mode</p>
-  <button class="btn" onclick="startPresentation()">▶ Tap to Start</button>
+  <p>Please view in landscape for the best experience</p>
+  <button class="start-btn" onclick="startPresentation()">▶ Tap to Start</button>
 </div>
 
-<!-- Rotate overlay -->
 <div id="rotateOverlay">
-  <span>🔄</span>
+  <div class="icon">🔄</div>
   <p>Please rotate your device to <strong>landscape</strong> to continue</p>
 </div>
 
-<!-- UI -->
-<div class="lock-indicator" id="lockIndicator">🔒 Use buttons to navigate</div>
-<div class="slide-badge" id="slideBadge">1 / 10</div>
-<button id="fsBtn" onclick="toggleFS()">⛶ Fullscreen</button>
-
-<div class="reveal">
-  <div class="slides">
-
-    <!-- SLIDE 1 — Cover (LOCKED) -->
-    <section>
-      <div class="slide-wrap">
-        <img src="slides/slide-001.jpg" alt="Cover">
-        <!-- ENG button -->
-        <a class="hotspot" style="left:120px; top:380px; width:130px; height:110px;" href="#/1" title="ENG"></a>
-      </div>
-    </section>
-
-    <!-- SLIDE 2 — Main Menu (LOCKED) -->
-    <section>
-      <div class="slide-wrap">
-        <img src="slides/slide-214.jpg" alt="Main Menu">
-        <!-- Misconception of Medical Card -->
-        <a class="hotspot" style="left:155px; top:490px; width:390px; height:200px;" href="#/2" title="Misconception"></a>
-        <!-- 48 Critical Illnesses -->
-        <a class="hotspot" style="left:415px; top:18px; width:285px; height:125px;" href="#/8" title="48 CI"></a>
-        <!-- Urgency -->
-        <a class="hotspot" style="left:605px; top:490px; width:390px; height:200px;" href="#/9" title="Urgency"></a>
-      </div>
-    </section>
-
-    <!-- SLIDE 3 — 2 Big Misconceptions (FREE) -->
-    <section>
-      <div class="slide-wrap">
-        <img src="slides/slide-225.jpg" alt="2 Big Misconceptions">
-        <a class="hotspot" style="left:16px; top:738px; width:270px; height:108px;" href="#/1" title="Back"></a>
-        <a class="hotspot" style="left:310px; top:756px; width:80px; height:80px;" href="#/1" title="Home"></a>
-        <a class="hotspot" style="left:1314px; top:738px; width:270px; height:108px;" href="#/3" title="Next"></a>
-      </div>
-    </section>
-
-    <!-- SLIDE 4 — Misconception #1 (FREE) -->
-    <section>
-      <div class="slide-wrap">
-        <img src="slides/slide-226.jpg" alt="Misconception #1">
-        <a class="hotspot" style="left:16px; top:738px; width:270px; height:108px;" href="#/2" title="Back"></a>
-        <a class="hotspot" style="left:310px; top:756px; width:80px; height:80px;" href="#/1" title="Home"></a>
-        <a class="hotspot" style="left:1314px; top:738px; width:270px; height:108px;" href="#/4" title="Next"></a>
-      </div>
-    </section>
-
-    <!-- SLIDE 5 — What's NOT Covered (FREE) -->
-    <section>
-      <div class="slide-wrap">
-        <img src="slides/slide-227.jpg" alt="What's Not Covered">
-        <a class="hotspot" style="left:16px; top:738px; width:270px; height:108px;" href="#/3" title="Back"></a>
-        <a class="hotspot" style="left:310px; top:756px; width:80px; height:80px;" href="#/1" title="Home"></a>
-        <a class="hotspot" style="left:1314px; top:738px; width:270px; height:108px;" href="#/5" title="Next"></a>
-      </div>
-    </section>
-
-    <!-- SLIDE 6 — Not Covered Detail (FREE) -->
-    <section>
-      <div class="slide-wrap">
-        <img src="slides/slide-233.jpg" alt="Not Covered Detail">
-        <a class="hotspot" style="left:16px; top:738px; width:270px; height:108px;" href="#/4" title="Back"></a>
-      </div>
-    </section>
-
-    <!-- SLIDE 7 — Misconception #2 (FREE) -->
-    <section>
-      <div class="slide-wrap">
-        <img src="slides/slide-260.jpg" alt="Misconception #2">
-        <a class="hotspot" style="left:16px; top:738px; width:270px; height:108px;" href="#/1" title="Back"></a>
-        <a class="hotspot" style="left:310px; top:756px; width:80px; height:80px;" href="#/1" title="Home"></a>
-        <a class="hotspot" style="left:1314px; top:738px; width:270px; height:108px;" href="#/7" title="Next"></a>
-      </div>
-    </section>
-
-    <!-- SLIDE 8 — Madam A Cancer Case (FREE) -->
-    <section>
-      <div class="slide-wrap">
-        <img src="slides/slide-261.jpg" alt="Madam A Cancer Case">
-        <a class="hotspot" style="left:16px; top:738px; width:270px; height:108px;" href="#/6" title="Back"></a>
-        <a class="hotspot" style="left:310px; top:756px; width:80px; height:80px;" href="#/1" title="Home"></a>
-        <a class="hotspot" style="left:1314px; top:738px; width:270px; height:108px;" href="#/8" title="Next"></a>
-      </div>
-    </section>
-
-    <!-- SLIDE 9 — 48 Critical Illnesses (FREE) -->
-    <section>
-      <div class="slide-wrap">
-        <img src="slides/slide-267.jpg" alt="48 Critical Illnesses">
-        <a class="hotspot" style="left:16px; top:738px; width:270px; height:108px;" href="#/1" title="Back"></a>
-      </div>
-    </section>
-
-    <!-- SLIDE 10 — Urgency (FREE) -->
-    <section>
-      <div class="slide-wrap">
-        <img src="slides/slide-270.jpg" alt="Urgency">
-        <a class="hotspot" style="left:16px; top:738px; width:270px; height:108px;" href="#/1" title="Back"></a>
-        <a class="hotspot" style="left:310px; top:756px; width:80px; height:80px;" href="#/1" title="Home"></a>
-        <a class="hotspot" style="left:1314px; top:738px; width:270px; height:108px;" href="#/9" title="Next"></a>
-      </div>
-    </section>
-
+<div id="toolbar">
+  <div class="tb-group">
+    <button class="tb-btn" id="prevBtn" onclick="changePage(-1)">◀ Prev</button>
+    <button class="tb-btn" id="nextBtn" onclick="changePage(1)">Next ▶</button>
   </div>
+  <div class="tb-group">
+    <input type="number" id="pageInput" value="1" min="1"
+           onchange="goToPage(parseInt(this.value))"
+           onkeydown="if(event.key==='Enter') goToPage(parseInt(this.value))">
+    <span id="pageInfo">/ —</span>
+  </div>
+  <div class="tb-group">
+    <select id="zoomSelect" onchange="setZoom(this.value)">
+      <option value="page-fit" selected>Fit Page</option>
+      <option value="page-width">Fit Width</option>
+      <option value="0.5">50%</option>
+      <option value="0.75">75%</option>
+      <option value="1.0">100%</option>
+      <option value="1.25">125%</option>
+      <option value="1.5">150%</option>
+    </select>
+  </div>
+  <button id="fsBtn" onclick="toggleFS()">⛶ Fullscreen</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+<div id="canvasContainer">
+  <div id="pageWrapper">
+    <canvas id="pdfCanvas"></canvas>
+    <div id="annotationLayer"></div>
+  </div>
+  <div id="loadingMsg">Loading PDF...</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
-  const LOCKED_SLIDES = new Set([0, 1]);
-  const TOTAL = 10;
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-  // ── Reveal init ──
-  Reveal.initialize({
-    hash: true,
-    transition: 'fade',
-    transitionSpeed: 'fast',
-    width: 1600,
-    height: 900,
-    margin: 0,
-    minScale: 0.1,
-    maxScale: 1.0,
-    controls: false,
-    progress: false,
-    center: true,
-  });
+  const PDF_URL = 'cipro.pdf';
 
-  // ── Slide changed ──
-  Reveal.on('slidechanged', event => {
-    const idx = event.indexh;
-    document.getElementById('slideBadge').textContent = (idx + 1) + ' / ' + TOTAL;
-    const lock = document.getElementById('lockIndicator');
-    LOCKED_SLIDES.has(idx) ? lock.classList.add('visible') : lock.classList.remove('visible');
-  });
+  let pdfDoc    = null;
+  let pageNum   = 1;
+  let pageCount = 0;
+  let rendering = false;
+  let zoomMode  = 'page-fit';
 
-  Reveal.on('ready', () => {
-    const idx = Reveal.getState().indexh || 0;
-    if (LOCKED_SLIDES.has(idx)) document.getElementById('lockIndicator').classList.add('visible');
-  });
+  const canvas     = document.getElementById('pdfCanvas');
+  const ctx        = canvas.getContext('2d');
+  const annLayer   = document.getElementById('annotationLayer');
+  const loadingMsg = document.getElementById('loadingMsg');
 
-  function getCurrentIndex() { return Reveal.getState().indexh || 0; }
-
-  // ── Block keyboard on locked slides ──
-  document.addEventListener('keydown', e => {
-    if (LOCKED_SLIDES.has(getCurrentIndex())) {
-      if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)) {
-        e.stopImmediatePropagation();
-        e.preventDefault();
-      }
-    }
-    // D = debug mode
-    if (e.key === 'd' || e.key === 'D') document.body.classList.toggle('debug');
-  }, true);
-
-  // ── Block swipe on locked slides ──
-  let touchStartX = 0;
-  document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
-  document.addEventListener('touchend', e => {
-    if (LOCKED_SLIDES.has(getCurrentIndex())) {
-      if (Math.abs(e.changedTouches[0].clientX - touchStartX) > 30) {
-        setTimeout(() => Reveal.slide(getCurrentIndex()), 10);
-      }
-    }
-  });
-
-  // ── Splash + fullscreen + orientation ──
+  // ── Splash ──
   function startPresentation() {
     document.getElementById('splash').style.display = 'none';
-
-    // Try fullscreen
-    const el = document.documentElement;
-    if (el.requestFullscreen) el.requestFullscreen();
-    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-    else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
-
-    // Try orientation lock (Android Chrome, some tablets)
+    const el  = document.documentElement;
+    const rfs = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+    if (rfs) rfs.call(el).catch(() => {});
     if (screen.orientation && screen.orientation.lock) {
       screen.orientation.lock('landscape').catch(() => {});
     }
-
     checkOrientation();
+    loadPDF();
   }
 
-  // ── Fullscreen button ──
+  // ── Load PDF ──
+  function loadPDF() {
+    const bar = document.getElementById('loadingBar');
+    bar.style.width = '30%';
+    pdfjsLib.getDocument(PDF_URL).promise.then(pdf => {
+      pdfDoc    = pdf;
+      pageCount = pdf.numPages;
+      document.getElementById('pageInfo').textContent = '/ ' + pageCount;
+      document.getElementById('pageInput').max = pageCount;
+      bar.style.width = '100%';
+      setTimeout(() => { bar.style.width = '0%'; }, 400);
+      loadingMsg.style.display = 'none';
+      renderPage(pageNum);
+    }).catch(err => {
+      loadingMsg.textContent = '⚠️ Error loading PDF: ' + err.message;
+    });
+  }
+
+  // ── Calculate scale ──
+  function getScale(viewport) {
+    const c      = document.getElementById('canvasContainer');
+    const availW = c.clientWidth  - 24;
+    const availH = c.clientHeight - 24;
+    if (zoomMode === 'page-fit')   return Math.min(availW / viewport.width, availH / viewport.height);
+    if (zoomMode === 'page-width') return availW / viewport.width;
+    return parseFloat(zoomMode);
+  }
+
+  // ── Render page ──
+  function renderPage(num) {
+    if (!pdfDoc || rendering) return;
+    rendering = true;
+
+    pdfDoc.getPage(num).then(page => {
+      const base     = page.getViewport({ scale: 1.0 });
+      const scale    = getScale(base);
+      const viewport = page.getViewport({ scale });
+
+      canvas.width  = viewport.width;
+      canvas.height = viewport.height;
+
+      page.render({ canvasContext: ctx, viewport }).promise.then(() => {
+        rendering = false;
+        updateUI();
+        buildAnnotationLayer(page, viewport);
+      });
+    });
+  }
+
+  // ── Build annotation layer ──
+  // Uses manual rect transform — avoids broken AnnotationLayer.render() API
+  function buildAnnotationLayer(page, viewport) {
+    annLayer.innerHTML = '';
+    annLayer.style.width  = viewport.width  + 'px';
+    annLayer.style.height = viewport.height + 'px';
+
+    page.getAnnotations({ intent: 'display' }).then(annotations => {
+      annotations.forEach(ann => {
+        if (ann.subtype !== 'Link') return;
+
+        // Transform PDF coordinates to screen coordinates
+        // PDF origin is bottom-left; screen origin is top-left
+        // viewport.transform handles this flip automatically
+        const rect = pdfjsLib.Util.normalizeRect(ann.rect);
+        const p1   = pdfjsLib.Util.applyTransform([rect[0], rect[1]], viewport.transform);
+        const p2   = pdfjsLib.Util.applyTransform([rect[2], rect[3]], viewport.transform);
+
+        const left   = Math.min(p1[0], p2[0]);
+        const top    = Math.min(p1[1], p2[1]);
+        const width  = Math.abs(p2[0] - p1[0]);
+        const height = Math.abs(p2[1] - p1[1]);
+
+        const section       = document.createElement('section');
+        section.className   = 'linkAnnotation';
+        section.style.left   = left   + 'px';
+        section.style.top    = top    + 'px';
+        section.style.width  = width  + 'px';
+        section.style.height = height + 'px';
+
+        const a = document.createElement('a');
+
+        if (ann.url) {
+          // ── External URL ──
+          a.href   = ann.url;
+          a.target = '_blank';
+          a.rel    = 'noopener noreferrer';
+        } else if (ann.dest) {
+          // ── Internal destination ──
+          a.href = 'javascript:void(0)';
+          const dest = ann.dest;
+          a.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            resolveAndNavigate(dest);
+          });
+        } else if (ann.action) {
+          // ── Named action ──
+          a.href = 'javascript:void(0)';
+          const action = ann.action;
+          a.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleNamedAction(action);
+          });
+        } else {
+          return; // skip if no destination
+        }
+
+        section.appendChild(a);
+        annLayer.appendChild(section);
+      });
+    });
+  }
+
+  // ── Resolve internal destination ──
+  function resolveAndNavigate(dest) {
+    if (typeof dest === 'string') {
+      pdfDoc.getDestination(dest).then(destArray => {
+        if (destArray) resolveDestArray(destArray);
+      }).catch(console.error);
+    } else if (Array.isArray(dest)) {
+      resolveDestArray(dest);
+    }
+  }
+
+  function resolveDestArray(destArray) {
+    const ref = destArray[0];
+    if (ref && typeof ref === 'object' && ref.num !== undefined) {
+      // PDF object reference e.g. {"num":217,"gen":0}
+      pdfDoc.getPageIndex(ref).then(idx => goToPage(idx + 1)).catch(console.error);
+    } else if (typeof ref === 'number') {
+      goToPage(ref + 1);
+    }
+  }
+
+  // ── Named actions ──
+  function handleNamedAction(action) {
+    const type = typeof action === 'string' ? action : (action.type || '');
+    if (type === 'NextPage')  changePage(1);
+    if (type === 'PrevPage')  changePage(-1);
+    if (type === 'FirstPage') goToPage(1);
+    if (type === 'LastPage')  goToPage(pageCount);
+  }
+
+  // ── Navigation ──
+  function changePage(delta) { goToPage(pageNum + delta); }
+
+  function goToPage(num) {
+    if (!pdfDoc) return;
+    num = Math.max(1, Math.min(num, pageCount));
+    pageNum = num;
+    document.getElementById('pageInput').value = num;
+    renderPage(num);
+  }
+
+  function updateUI() {
+    document.getElementById('prevBtn').disabled = pageNum <= 1;
+    document.getElementById('nextBtn').disabled = pageNum >= pageCount;
+    document.getElementById('pageInfo').textContent = '/ ' + pageCount;
+  }
+
+  // ── Zoom ──
+  function setZoom(val) { zoomMode = val; renderPage(pageNum); }
+
+  // ── Keyboard ──
+  document.addEventListener('keydown', e => {
+    if (['ArrowRight','ArrowDown',' '].includes(e.key)) changePage(1);
+    if (['ArrowLeft','ArrowUp'].includes(e.key)) changePage(-1);
+  });
+
+  // ── Touch swipe ──
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const diff = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(diff) > 50) changePage(diff < 0 ? 1 : -1);
+  });
+
+  // ── Fullscreen ──
   function toggleFS() {
-    const btn = document.getElementById('fsBtn');
     if (!document.fullscreenElement && !document.webkitFullscreenElement) {
       const el = document.documentElement;
-      if (el.requestFullscreen) el.requestFullscreen();
-      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-      btn.textContent = '✕ Exit';
+      (el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen).call(el).catch(() => {});
     } else {
-      if (document.exitFullscreen) document.exitFullscreen();
-      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-      btn.textContent = '⛶ Fullscreen';
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document).catch(() => {});
     }
   }
+  const syncFsBtn = () => {
+    document.getElementById('fsBtn').textContent =
+      (document.fullscreenElement || document.webkitFullscreenElement) ? '✕ Exit' : '⛶ Fullscreen';
+    setTimeout(() => renderPage(pageNum), 300);
+  };
+  document.addEventListener('fullscreenchange', syncFsBtn);
+  document.addEventListener('webkitfullscreenchange', syncFsBtn);
 
-  document.addEventListener('fullscreenchange', () => {
-    const btn = document.getElementById('fsBtn');
-    btn.textContent = document.fullscreenElement ? '✕ Exit' : '⛶ Fullscreen';
-  });
-  document.addEventListener('webkitfullscreenchange', () => {
-    const btn = document.getElementById('fsBtn');
-    btn.textContent = document.webkitFullscreenElement ? '✕ Exit' : '⛶ Fullscreen';
-  });
-
-  // ── Orientation check ──
+  // ── Orientation ──
   function checkOrientation() {
-    const overlay = document.getElementById('rotateOverlay');
-    const isPortrait = window.innerHeight > window.innerWidth;
-    if (isPortrait) {
-      overlay.classList.add('show');
-    } else {
-      overlay.classList.remove('show');
-    }
+    const o = document.getElementById('rotateOverlay');
+    window.innerHeight > window.innerWidth ? o.classList.add('show') : o.classList.remove('show');
   }
-
-  window.addEventListener('resize', checkOrientation);
-  window.addEventListener('orientationchange', () => {
-    setTimeout(checkOrientation, 300);
-  });
+  window.addEventListener('resize', () => { checkOrientation(); if (pdfDoc) renderPage(pageNum); });
+  window.addEventListener('orientationchange', () => setTimeout(checkOrientation, 300));
 </script>
 </body>
 </html>
