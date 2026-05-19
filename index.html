@@ -205,7 +205,7 @@
     align-items: center;
     justify-content: center;
     background: #1a1a1a;
-    overflow: auto;
+    overflow: hidden;
   }
 
   #pageWrapper {
@@ -495,20 +495,20 @@
 
 
   // ── Keyboard ──
-  document.addEventListener('keydown', e => {
-    if (['ArrowRight','ArrowDown',' '].includes(e.key)) changePage(1);
-    if (['ArrowLeft','ArrowUp'].includes(e.key)) changePage(-1);
-  });
+  //document.addEventListener('keydown', e => {
+    //if (['ArrowRight','ArrowDown',' '].includes(e.key)) changePage(1);
+    //if (['ArrowLeft','ArrowUp'].includes(e.key)) changePage(-1);
+  //});
 
   // ── Touch swipe ──
-  let touchStartX = 0;
-  document.addEventListener('touchstart', e => {
-    touchStartX = e.touches[0].clientX;
-  }, { passive: true });
-  document.addEventListener('touchend', e => {
-    const diff = e.changedTouches[0].clientX - touchStartX;
-    if (Math.abs(diff) > 50) changePage(diff < 0 ? 1 : -1);
-  });
+  //let touchStartX = 0;
+  //document.addEventListener('touchstart', e => {
+    //touchStartX = e.touches[0].clientX;
+  //}, { passive: true });
+  //document.addEventListener('touchend', e => {
+    //const diff = e.changedTouches[0].clientX - touchStartX;
+    //if (Math.abs(diff) > 50) changePage(diff < 0 ? 1 : -1);
+  //});
 
   // ── Fullscreen ──
   function toggleFS() {
