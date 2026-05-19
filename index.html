@@ -68,27 +68,36 @@
   }
   #fsBtn:hover { background: #c01010; }
 
-  /* ── Quotes ticker ── */
+ /* ── Apple-Themed Typographic Marquee ── */
   #quotesTicker {
     flex: 1;
     min-width: 0;
-    overflow: hidden;
     display: flex;
     align-items: center;
-    padding: 0 10px;
+    justify-content: center;
+    padding: 0 16px;
+    overflow: hidden; /* Clips the text during the vertical slide */
+    height: 32px;     /* Sets a fixed track height for the animation clip */
   }
+
   #quotesInner {
-    white-space: nowrap;
-    font-size: 12px;
-    color: #f0c040;
-    font-style: italic;
-    animation: tickerScroll 18s linear infinite;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.01em; /* Tight kerning standard in San Francisco font */
+    color: #f5f5f7;          /* Apple's premium off-white text color */
+    text-align: center;
+    opacity: 1;
+    transform: translateY(0);
+    /* Apple physics uses custom cubic-bezier timing curves instead of standard 'ease' */
+    transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), 
+                opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1);
     display: inline-block;
   }
-  #quotesInner::before { content: '💬  '; }
-  @keyframes tickerScroll {
-    0%   { transform: translateX(100%); }
-    100% { transform: translateX(-100%); }
+
+  /* Optional: Make specific words or numbers look intentional (like key statistics) */
+  #quotesInner strong {
+    color: #ff9f0a; /* Apple Dark Mode Orange Accent */
+    font-weight: 600;
   }
 
   /* ── Search ── */
@@ -526,38 +535,54 @@
   window.addEventListener('resize', () => { checkOrientation(); if (pdfDoc) renderPage(pageNum); });
   window.addEventListener('orientationchange', () => setTimeout(checkOrientation, 300));
 
-  // ── Insurance Quotes Ticker ──
+  // ── Apple-Themed Quote Data (Formatted with <strong> tags for visual hierarchy) ──
   const QUOTES = [
-    "90% of Malaysians are underinsured — LIAM 2020",
+    "<strong>90%</strong> of Malaysians are underinsured — LIAM 2020",
     "Critical Illness can strike anyone, at any age, at any time.",
-    "Medical Card pays the hospital. CI Insurance pays YOU.",
-    "After critical illness treatment, the most important thing is how we live on.",
-    "A lump sum CI payout gives you freedom to focus on recovery, not finances.",
-    "48 covered critical illnesses — one policy, comprehensive protection.",
-    "Cancer, Heart Attack, Stroke — the top 3 reasons for CI claims in Malaysia.",
+    "Medical Card pays the hospital. <strong>CI Insurance pays YOU.</strong>",
+    "After treatment, the most important thing is how we live on.",
+    "A lump sum CI payout gives you freedom to focus on <strong>recovery</strong>.",
+    "<strong>48</strong> covered critical illnesses — comprehensive protection.",
+    "Cancer, Heart Attack, Stroke — the top 3 claims in Malaysia.",
     "Don't wait until it's too late — protect your future today.",
-    "CI Pro: Beyond Critical Cover, beyond ordinary insurance.",
-    "Your medical card covers hospitalisation. Who covers the rest of your life?",
+    "<strong>CI Pro:</strong> Beyond Critical Cover, beyond ordinary insurance.",
+    "Your medical card covers hospitalisation. Who covers the rest?"
   ];
 
   let quoteIndex = 0;
+  const el = document.getElementById('quotesInner');
+
+  // Set initial Apple premium layout string safely
+  if (el) el.innerHTML = QUOTES[0];
 
   function rotateQuote() {
-    const el = document.getElementById('quotesInner');
     if (!el) return;
-    // Fade out
-    el.style.transition = 'opacity 0.6s';
+    
+    // Step 1: Slide up and fade out smoothly
+    el.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 1, 1), opacity 0.4s ease-in';
+    el.style.transform = 'translateY(-20px)';
     el.style.opacity = '0';
+    
+    // Step 2: Once hidden, snap instantly to the bottom, swap text, and push up to center frame
     setTimeout(() => {
       quoteIndex = (quoteIndex + 1) % QUOTES.length;
-      el.textContent = QUOTES[quoteIndex];
-      el.style.opacity = '1';
-    }, 600);
+      el.innerHTML = QUOTES[quoteIndex]; // Using innerHTML to support the <strong> styling
+      
+      // Turn off transitions to snap positions instantaneously without user seeing it
+      el.style.transition = 'none';
+      el.style.transform = 'translateY(20px)';
+      
+      // Step 3: Trigger a browser reflow forcing the snap to register, then slide up nicely
+      requestAnimationFrame(() => {
+        el.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.5s ease-out';
+        el.style.transform = 'translateY(0)';
+        el.style.opacity = '1';
+      });
+
+    }, 500); // Matches the initial fade-out duration
   }
 
-  // Start with first quote
-  document.getElementById('quotesInner').textContent = QUOTES[0];
-  // Rotate every 6 seconds
+  // Rotate every 6 seconds 
   setInterval(rotateQuote, 6000);
 
   // ── Search ──
